@@ -98,6 +98,12 @@ variable "route_policies" {
   }))
   default  = {}
   nullable = false
+  validation {
+    condition = alltrue([
+      for k, v in var.route_policies : contains(["IMPORT", "EXPORT"], v.type)
+    ])
+    error_message = "Route policy type must be IMPORT or EXPORT."
+  }
 }
 
 variable "tunnels" {

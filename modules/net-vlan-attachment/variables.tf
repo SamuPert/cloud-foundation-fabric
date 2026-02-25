@@ -23,8 +23,8 @@ variable "admin_enabled" {
 variable "dedicated_interconnect_config" {
   description = "Dedicated interconnect configuration."
   type = object({
-    # Possible values @ https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_interconnect_attachment#bandwidth  
-    bandwidth    = optional(string, "BPS_10G")
+    # Possible values @ https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_interconnect_attachment#bandwidth
+    bandwidth       = optional(string, "BPS_10G")
     bgp_range       = optional(string)
     bgp_priority    = optional(number)
     interconnect    = string
@@ -87,6 +87,36 @@ variable "project_id" {
 variable "region" {
   description = "The region where resources are created."
   type        = string
+}
+
+variable "route_policies" {
+  description = "Route policies."
+  type = map(object({
+    type = optional(string, "IMPORT")
+    terms = list(object({
+      priority = number
+      match = object({
+        expression  = string
+        title       = optional(string)
+        description = optional(string)
+        tag         = optional(string)
+      })
+      actions = list(object({
+        expression  = string
+        title       = optional(string)
+        description = optional(string)
+        tag         = optional(string)
+      }))
+    }))
+  }))
+  default  = {}
+  nullable = false
+  validation {
+    condition = alltrue([
+      for k, v in var.route_policies : contains(["IMPORT", "EXPORT"], v.type)
+    ])
+    error_message = "Route policy type must be IMPORT or EXPORT."
+  }
 }
 
 variable "router_config" {
