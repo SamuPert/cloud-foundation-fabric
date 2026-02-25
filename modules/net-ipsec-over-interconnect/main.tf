@@ -125,7 +125,41 @@ resource "google_compute_router_peer" "default" {
     }
   }
 
-  interface = google_compute_router_interface.default[each.key].name
+  import_policies = each.value.bgp_peer.import_policies
+  export_policies = each.value.bgp_peer.export_policies
+  interface       = google_compute_router_interface.default[each.key].name
+  depends_on      = [google_compute_router_route_policy.policy]
+}
+
+resource "google_compute_router_route_policy" "policy" {
+  for_each = var.route_policies
+  name     = each.key
+  router   = local.router
+  project  = var.project_id
+  region   = var.region
+  type     = each.value.type == "IMPORT" ? "ROUTE_POLICY_TYPE_IMPORT" : "ROUTE_POLICY_TYPE_EXPORT"
+
+  dynamic "terms" {
+    for_each = each.value.terms
+    content {
+      priority = terms.value.priority
+      match {
+        expression  = terms.value.match.expression
+        title       = terms.value.match.title
+        description = terms.value.match.description
+        tag         = terms.value.match.tag
+      }
+      dynamic "actions" {
+        for_each = terms.value.actions
+        content {
+          expression  = actions.value.expression
+          title       = actions.value.title
+          description = actions.value.description
+          tag         = actions.value.tag
+        }
+      }
+    }
+  }
 }
 
 resource "google_compute_router_interface" "default" {

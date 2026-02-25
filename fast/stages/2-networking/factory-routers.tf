@@ -37,6 +37,18 @@ locals {
       }
     ]
   ])...)
+  router_policies = merge(flatten([
+    for router_key, router in local.router_configs : [
+      for policy_key, policy in try(router.route_policies, {}) : {
+        "${router_key}/${policy_key}" = merge(policy, {
+          router_name = router.name
+          project_id  = router.project_id
+          region      = router.region
+          policy_name = policy_key
+        })
+      }
+    ]
+  ])...)
 }
 
 resource "google_compute_router" "default" {
@@ -70,5 +82,44 @@ resource "google_compute_router" "default" {
     }
     keepalive_interval = each.value.keepalive
     asn                = each.value.asn
+  }
+}
+
+resource "google_compute_router_route_policy" "default" {
+  for_each = local.router_policies
+  name     = each.value.policy_name
+  router   = each.value.router_name
+  project = lookup(
+    local.ctx_projects.project_ids,
+    replace(each.value.project_id, "$project_ids:", ""),
+    each.value.project_id
+  )
+  region = lookup(
+    local.ctx.locations,
+    replace(each.value.region, "$locations:", ""),
+    each.value.region
+  )
+  type = try(each.value.type, "IMPORT") == "IMPORT" ? "ROUTE_POLICY_TYPE_IMPORT" : "ROUTE_POLICY_TYPE_EXPORT"
+
+  dynamic "terms" {
+    for_each = each.value.terms
+    content {
+      priority = terms.value.priority
+      match {
+        expression  = terms.value.match.expression
+        title       = try(terms.value.match.title, null)
+        description = try(terms.value.match.description, null)
+        tag         = try(terms.value.match.tag, null)
+      }
+      dynamic "actions" {
+        for_each = terms.value.actions
+        content {
+          expression  = actions.value.expression
+          title       = try(actions.value.title, null)
+          description = try(actions.value.description, null)
+          tag         = try(actions.value.tag, null)
+        }
+      }
+    }
   }
 }

@@ -154,6 +154,40 @@ resource "google_compute_router_peer" "bgp_peer" {
   ipv6_nexthop_address               = try(each.value.bgp_peer.ipv6.nexthop_address, null)
   peer_ipv6_nexthop_address          = try(each.value.bgp_peer.ipv6.peer_nexthop_address, null)
   zero_custom_learned_route_priority = try(each.value.bgp_peer.custom_learned_ip_ranges.route_priority, 1000) == 0 ? true : false
+  import_policies                    = each.value.bgp_peer.import_policies
+  export_policies                    = each.value.bgp_peer.export_policies
+  depends_on                         = [google_compute_router_route_policy.policy]
+}
+
+resource "google_compute_router_route_policy" "policy" {
+  for_each = var.route_policies
+  name     = each.key
+  router   = local.router
+  project  = local.project_id
+  region   = local.region
+  type     = each.value.type == "IMPORT" ? "ROUTE_POLICY_TYPE_IMPORT" : "ROUTE_POLICY_TYPE_EXPORT"
+
+  dynamic "terms" {
+    for_each = each.value.terms
+    content {
+      priority = terms.value.priority
+      match {
+        expression  = terms.value.match.expression
+        title       = terms.value.match.title
+        description = terms.value.match.description
+        tag         = terms.value.match.tag
+      }
+      dynamic "actions" {
+        for_each = terms.value.actions
+        content {
+          expression  = actions.value.expression
+          title       = actions.value.title
+          description = actions.value.description
+          tag         = actions.value.tag
+        }
+      }
+    }
+  }
 }
 
 resource "google_compute_router_interface" "router_interface" {

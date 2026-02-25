@@ -70,7 +70,33 @@ variable "router_config" {
     keepalive       = optional(number)
     peer_asn        = number
     routes_priority = optional(number, 100)
+    import_policies = optional(list(string))
+    export_policies = optional(list(string))
   })
+}
+
+variable "route_policies" {
+  description = "Route policies."
+  type = map(object({
+    type = optional(string, "IMPORT")
+    terms = list(object({
+      priority = number
+      match = object({
+        expression  = string
+        title       = optional(string)
+        description = optional(string)
+        tag         = optional(string)
+      })
+      actions = list(object({
+        expression  = string
+        title       = optional(string)
+        description = optional(string)
+        tag         = optional(string)
+      }))
+    }))
+  }))
+  default  = {}
+  nullable = false
 }
 
 variable "vpc_config" {
