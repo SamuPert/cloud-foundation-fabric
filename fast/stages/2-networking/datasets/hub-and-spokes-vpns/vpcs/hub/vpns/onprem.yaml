@@ -25,11 +25,35 @@ peer_gateways:
 router_config:
   create: false
   name: $routers:hub/vpn-router
+route_policies:
+  allow-rfc1918:
+    type: IMPORT
+    terms:
+      - priority: 1
+        match:
+          expression: "destination == '10.0.0.0/8'"
+          title: "allow-10"
+        actions:
+          - expression: "accept()"
+      - priority: 2
+        match:
+          expression: "destination == '172.16.0.0/12'"
+          title: "allow-172"
+        actions:
+          - expression: "accept()"
+      - priority: 3
+        match:
+          expression: "destination == '192.168.0.0/16'"
+          title: "allow-192"
+        actions:
+          - expression: "accept()"
 tunnels:
   remote-0:
     bgp_peer:
       address: 169.254.128.1
       asn: 64513
+      import_policies:
+        - allow-rfc1918
       # Uncomment to enable custom route advertisements for this BGP peer. (see https://docs.cloud.google.com/network-connectivity/docs/router/concepts/advertised-routes#am-custom)
       # custom_advertise:
       #   all_subnets: true
@@ -51,6 +75,8 @@ tunnels:
     bgp_peer:
       address: 169.254.128.5
       asn: 64513
+      import_policies:
+        - allow-rfc1918
       # Uncomment to enable custom route advertisements for this BGP peer. (see https://docs.cloud.google.com/network-connectivity/docs/router/concepts/advertised-routes#am-custom)
       # custom_advertise:
       #   all_subnets: true
