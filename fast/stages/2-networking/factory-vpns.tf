@@ -35,10 +35,11 @@ locals {
       vpc_name = v.factory_basepath
       # TODO: discuss - this is pushing context at any cost, as project could be easily resolved
       # as module.vpcs[v.factory_basepath].project_id
-      project_id    = local.vpcs[v.factory_basepath].project_id
-      router_config = try(v.router_config, {})
-      region        = try(v.region, local.defaults.vpcs.region)
-      peer_gateways = try(v.peer_gateways, {})
+      project_id     = local.vpcs[v.factory_basepath].project_id
+      router_config  = try(v.router_config, {})
+      route_policies = try(v.route_policies, {})
+      region         = try(v.region, local.defaults.vpcs.region)
+      peer_gateways  = try(v.peer_gateways, {})
       tunnels       = try(v.tunnels, {})
     })
   }
@@ -72,6 +73,7 @@ module "vpn-ha" {
   network            = each.value.vpc_name
   region             = each.value.region
   router_config      = each.value.router_config
+  route_policies     = each.value.route_policies
   tunnels            = each.value.tunnels
   vpn_gateway        = google_compute_ha_vpn_gateway.default[each.key].id
   vpn_gateway_create = null

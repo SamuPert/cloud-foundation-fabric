@@ -125,6 +125,8 @@ resource "google_compute_router_peer" "default" {
   interface                 = google_compute_router_interface.default[0].name
   advertised_route_priority = var.dedicated_interconnect_config.bgp_priority
   advertise_mode            = "CUSTOM"
+  import_policies           = var.dedicated_interconnect_config.import_policies
+  export_policies           = var.dedicated_interconnect_config.export_policies
 
   dynamic "advertised_ip_ranges" {
     for_each = var.ipsec_gateway_ip_ranges
@@ -153,8 +155,40 @@ resource "google_compute_router_peer" "default" {
   }
 
   depends_on = [
-    google_compute_router_interface.default
+    google_compute_router_interface.default,
+    google_compute_router_route_policy.policy
   ]
+}
+
+resource "google_compute_router_route_policy" "policy" {
+  for_each = var.route_policies
+  name     = each.key
+  router   = local.router
+  project  = var.project_id
+  region   = var.region
+  type     = each.value.type == "IMPORT" ? "ROUTE_POLICY_TYPE_IMPORT" : "ROUTE_POLICY_TYPE_EXPORT"
+
+  dynamic "terms" {
+    for_each = each.value.terms
+    content {
+      priority = terms.value.priority
+      match {
+        expression  = terms.value.match.expression
+        title       = terms.value.match.title
+        description = terms.value.match.description
+        tag         = terms.value.match.tag
+      }
+      dynamic "actions" {
+        for_each = terms.value.actions
+        content {
+          expression  = actions.value.expression
+          title       = actions.value.title
+          description = actions.value.description
+          tag         = actions.value.tag
+        }
+      }
+    }
+  }
 }
 
 resource "random_id" "secret" {

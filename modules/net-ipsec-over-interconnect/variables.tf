@@ -76,6 +76,36 @@ variable "router_config" {
   nullable = false
 }
 
+variable "route_policies" {
+  description = "Route policies."
+  type = map(object({
+    type = optional(string, "IMPORT")
+    terms = list(object({
+      priority = number
+      match = object({
+        expression  = string
+        title       = optional(string)
+        description = optional(string)
+        tag         = optional(string)
+      })
+      actions = list(object({
+        expression  = string
+        title       = optional(string)
+        description = optional(string)
+        tag         = optional(string)
+      }))
+    }))
+  }))
+  default  = {}
+  nullable = false
+  validation {
+    condition = alltrue([
+      for k, v in var.route_policies : contains(["IMPORT", "EXPORT"], v.type)
+    ])
+    error_message = "Route policy type must be IMPORT or EXPORT."
+  }
+}
+
 variable "tunnels" {
   description = "VPN tunnel configurations."
   type = map(object({
@@ -92,7 +122,9 @@ variable "tunnels" {
         name = string
         key  = string
       }))
-      route_priority = optional(number, 1000)
+      route_priority  = optional(number, 1000)
+      import_policies = optional(list(string))
+      export_policies = optional(list(string))
     })
     # each BGP session on the same Cloud Router must use a unique /30 CIDR
     # from the 169.254.0.0/16 block.
