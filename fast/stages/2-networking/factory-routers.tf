@@ -33,6 +33,20 @@ locals {
           advertised_groups = try(router_config.custom_advertise.all_subnets, false) ? ["ALL_SUBNETS"] : []
           keepalive         = try(router_config.keepalive, null)
           asn               = try(router_config.asn, null)
+          route_policies    = try(router_config.route_policies, {})
+        })
+      }
+    ]
+  ])...)
+
+  router_route_policies = merge(flatten([
+    for router_key, router_config in local.router_configs : [
+      for policy_key, policy_config in router_config.route_policies : {
+        "${router_key}/${policy_key}" = merge(policy_config, {
+          router_name = replace(router_key, "/", "-")
+          project     = lookup(local.ctx_projects.project_ids, replace(router_config.project_id, "$project_ids:", ""), router_config.project_id)
+          region      = lookup(local.ctx.locations, replace(router_config.region, "$locations:", ""), router_config.region)
+          name        = policy_key
         })
       }
     ]
@@ -71,4 +85,45 @@ resource "google_compute_router" "default" {
     keepalive_interval = each.value.keepalive
     asn                = each.value.asn
   }
+}
+
+resource "google_compute_router_route_policy" "default" {
+  for_each = local.router_route_policies
+  project  = each.value.project
+  region   = each.value.region
+  router   = each.value.router_name
+  name     = each.value.name
+  type     = each.value.type == "INPUT" ? "ROUTE_POLICY_TYPE_IMPORT" : each.value.type == "OUTPUT" ? "ROUTE_POLICY_TYPE_EXPORT" : null
+
+  dynamic "terms" {
+    for_each = try(each.value.terms, [])
+    content {
+      priority = terms.value.priority
+      dynamic "match" {
+        for_each = try(terms.value.match, null) != null ? [terms.value.match] : []
+        content {
+          expression  = match.value.expression
+          title       = try(match.value.title, null)
+          description = try(match.value.description, null)
+        }
+      }
+      dynamic "actions" {
+        for_each = try(terms.value.actions, [])
+        content {
+          expression  = actions.value.expression
+          title       = try(actions.value.title, null)
+          description = try(actions.value.description, null)
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = contains(["INPUT", "OUTPUT"], each.value.type)
+      error_message = "Route policy type must be either 'INPUT' or 'OUTPUT'."
+    }
+  }
+
+  depends_on = [google_compute_router.default]
 }

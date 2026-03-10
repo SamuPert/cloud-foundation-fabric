@@ -23,10 +23,12 @@ variable "admin_enabled" {
 variable "dedicated_interconnect_config" {
   description = "Dedicated interconnect configuration."
   type = object({
-    # Possible values @ https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_interconnect_attachment#bandwidth  
+    # Possible values @ https://registry.terraform.io/providers/hashicorp/google/latest/docs/resources/compute_interconnect_attachment#bandwidth
     bandwidth    = optional(string, "BPS_10G")
     bgp_range    = optional(string)
     bgp_priority = optional(number)
+    export_policies = optional(list(string))
+    import_policies = optional(list(string))
     interconnect = string
     vlan_tag     = string
   })
@@ -106,6 +108,22 @@ variable "router_config" {
       name = string
       key  = optional(string)
     }))
+    route_policies = optional(map(object({
+      type = string
+      terms = list(object({
+        priority = number
+        match = optional(object({
+          expression  = string
+          title       = optional(string)
+          description = optional(string)
+        }))
+        actions = optional(list(object({
+          expression  = string
+          title       = optional(string)
+          description = optional(string)
+        })), [])
+      }))
+    })), {})
     keepalive = optional(number)
     name      = optional(string, "router")
   })

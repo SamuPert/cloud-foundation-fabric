@@ -155,3 +155,48 @@ resource "google_compute_vpn_tunnel" "default" {
 resource "random_id" "default" {
   byte_length = 8
 }
+
+resource "google_compute_router_route_policy" "default" {
+  for_each = var.router_config.route_policies
+  project  = var.project_id
+  region   = var.region
+  router   = local.router_name
+  export_policies           = each.value.bgp_peer.export_policies
+  import_policies           = each.value.bgp_peer.import_policies
+  name     = each.key
+  type     = each.value.type == "INPUT" ? "ROUTE_POLICY_TYPE_IMPORT" : each.value.type == "OUTPUT" ? "ROUTE_POLICY_TYPE_EXPORT" : null
+
+  dynamic "terms" {
+    for_each = each.value.terms
+    content {
+      priority = terms.value.priority
+      dynamic "match" {
+        for_each = terms.value.match != null ? [terms.value.match] : []
+        content {
+          expression  = match.value.expression
+          title       = match.value.title
+          description = match.value.description
+        }
+      }
+      dynamic "actions" {
+        for_each = terms.value.actions != null ? terms.value.actions : []
+        content {
+          expression  = actions.value.expression
+          title       = actions.value.title
+          description = actions.value.description
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = contains(["INPUT", "OUTPUT"], each.value.type)
+      error_message = "Route policy type must be either 'INPUT' or 'OUTPUT'."
+    }
+  }
+
+  depends_on = [
+    google_compute_router.default
+  ]
+}

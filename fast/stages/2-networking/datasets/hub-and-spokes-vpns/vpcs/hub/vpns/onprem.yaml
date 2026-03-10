@@ -30,6 +30,10 @@ tunnels:
     bgp_peer:
       address: 169.254.128.1
       asn: 64513
+      # import_policies:
+      #   - my-import-policy
+      # export_policies:
+      #   - my-export-policy
       # Uncomment to enable custom route advertisements for this BGP peer. (see https://docs.cloud.google.com/network-connectivity/docs/router/concepts/advertised-routes#am-custom)
       # custom_advertise:
       #   all_subnets: true
@@ -51,6 +55,10 @@ tunnels:
     bgp_peer:
       address: 169.254.128.5
       asn: 64513
+      # import_policies:
+      #   - my-import-policy
+      # export_policies:
+      #   - my-export-policy
       # Uncomment to enable custom route advertisements for this BGP peer. (see https://docs.cloud.google.com/network-connectivity/docs/router/concepts/advertised-routes#am-custom)
       # custom_advertise:
       #   all_subnets: true

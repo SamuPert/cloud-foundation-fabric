@@ -124,6 +124,10 @@
       - **all_subnets**: *boolean*
       - **ip_ranges**: *object*
         - **`.*`**: *string*
+    - **route_policies**: *object*
+      - **`^[a-zA-Z0-9-]+$`**: *object*
+        - **type**: *string*
+        - **terms**: *array*
 - **simple_subnet**<a name="refs-simple_subnet"></a>: *object*
   - ⁺**name**: *string*
   - ⁺**ip_cidr_range**: *string*
