@@ -125,6 +125,8 @@ resource "google_compute_router_peer" "default" {
   interface                 = google_compute_router_interface.default[0].name
   advertised_route_priority = var.dedicated_interconnect_config.bgp_priority
   advertise_mode            = "CUSTOM"
+  export_policies           = try(var.dedicated_interconnect_config.export_policies, null)
+  import_policies           = try(var.dedicated_interconnect_config.import_policies, null)
 
   dynamic "advertised_ip_ranges" {
     for_each = var.ipsec_gateway_ip_ranges
@@ -159,4 +161,48 @@ resource "google_compute_router_peer" "default" {
 
 resource "random_id" "secret" {
   byte_length = 12
+}
+
+resource "google_compute_router_route_policy" "default" {
+  for_each = var.router_config.route_policies
+  project  = var.project_id
+  region   = var.region
+  router   = local.router
+  name     = each.key
+  type     = each.value.type == "IMPORT" ? "ROUTE_POLICY_TYPE_IMPORT" : each.value.type == "EXPORT" ? "ROUTE_POLICY_TYPE_EXPORT" : null
+
+  dynamic "terms" {
+    for_each = each.value.terms
+    content {
+      priority = terms.value.priority
+      dynamic "match" {
+        for_each = terms.value.match != null ? [terms.value.match] : []
+        content {
+          expression  = match.value.expression
+          title       = match.value.title
+          description = match.value.description
+        }
+      }
+      dynamic "actions" {
+        for_each = terms.value.actions != null ? terms.value.actions : []
+        content {
+          expression  = actions.value.expression
+          title       = actions.value.title
+          description = actions.value.description
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = contains(["IMPORT", "EXPORT"], each.value.type)
+      error_message = "Route policy type must be either 'IMPORT' or 'EXPORT'."
+    }
+  }
+
+  depends_on = [
+    google_compute_router.encrypted,
+    google_compute_router.unencrypted,
+  ]
 }

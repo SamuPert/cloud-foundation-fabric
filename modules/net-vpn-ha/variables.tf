@@ -78,6 +78,22 @@ variable "router_config" {
       all_subnets = bool
       ip_ranges   = map(string)
     }))
+    route_policies = optional(map(object({
+      type = string
+      terms = list(object({
+        priority = number
+        match = optional(object({
+          expression  = string
+          title       = optional(string)
+          description = optional(string)
+        }))
+        actions = optional(list(object({
+          expression  = string
+          title       = optional(string)
+          description = optional(string)
+        })), [])
+      }))
+    })), {})
     keepalive     = optional(number)
     name          = optional(string)
     override_name = optional(string)
@@ -104,6 +120,8 @@ variable "tunnels" {
         name = string
         key  = optional(string)
       }))
+      export_policies = optional(list(string))
+      import_policies = optional(list(string))
       ipv6 = optional(object({
         nexthop_address      = optional(string)
         peer_nexthop_address = optional(string)

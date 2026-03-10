@@ -114,6 +114,8 @@ resource "google_compute_router_peer" "bgp_peer" {
   project                   = local.project_id
   name                      = each.value.bgp_peer.name != null ? each.value.bgp_peer.name : "${var.name}-${each.key}"
   router                    = coalesce(each.value.router, local.router)
+  export_policies           = each.value.bgp_peer.export_policies
+  import_policies           = each.value.bgp_peer.import_policies
   peer_ip_address           = each.value.bgp_peer.address
   peer_asn                  = each.value.bgp_peer.asn
   advertised_route_priority = each.value.bgp_peer.route_priority
@@ -198,4 +200,47 @@ resource "random_id" "secret" {
 resource "random_id" "md5_keys" {
   for_each    = var.tunnels
   byte_length = 12
+}
+
+resource "google_compute_router_route_policy" "default" {
+  for_each = var.router_config.route_policies
+  project  = local.project_id
+  region   = local.region
+  router   = local.router_name
+  name     = each.key
+  type     = each.value.type == "IMPORT" ? "ROUTE_POLICY_TYPE_IMPORT" : each.value.type == "EXPORT" ? "ROUTE_POLICY_TYPE_EXPORT" : null
+
+  dynamic "terms" {
+    for_each = each.value.terms
+    content {
+      priority = terms.value.priority
+      dynamic "match" {
+        for_each = terms.value.match != null ? [terms.value.match] : []
+        content {
+          expression  = match.value.expression
+          title       = match.value.title
+          description = match.value.description
+        }
+      }
+      dynamic "actions" {
+        for_each = terms.value.actions != null ? terms.value.actions : []
+        content {
+          expression  = actions.value.expression
+          title       = actions.value.title
+          description = actions.value.description
+        }
+      }
+    }
+  }
+
+  lifecycle {
+    precondition {
+      condition     = contains(["IMPORT", "EXPORT"], each.value.type)
+      error_message = "Route policy type must be either 'IMPORT' or 'EXPORT'."
+    }
+  }
+
+  depends_on = [
+    google_compute_router.router
+  ]
 }
