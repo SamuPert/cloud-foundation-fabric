@@ -171,7 +171,7 @@ resource "google_compute_router_route_policy" "default" {
   region   = local.region
   router   = local.router_name
   name     = each.key
-  type     = each.value.type == "INPUT" ? "ROUTE_POLICY_TYPE_IMPORT" : each.value.type == "OUTPUT" ? "ROUTE_POLICY_TYPE_EXPORT" : null
+  type     = each.value.type == "IMPORT" ? "ROUTE_POLICY_TYPE_IMPORT" : each.value.type == "EXPORT" ? "ROUTE_POLICY_TYPE_EXPORT" : null
 
   dynamic "terms" {
     for_each = each.value.terms
@@ -198,8 +198,8 @@ resource "google_compute_router_route_policy" "default" {
 
   lifecycle {
     precondition {
-      condition     = contains(["INPUT", "OUTPUT"], each.value.type)
-      error_message = "Route policy type must be either 'INPUT' or 'OUTPUT'."
+      condition     = contains(["IMPORT", "EXPORT"], each.value.type)
+      error_message = "Route policy type must be either 'IMPORT' or 'EXPORT'."
     }
   }
 

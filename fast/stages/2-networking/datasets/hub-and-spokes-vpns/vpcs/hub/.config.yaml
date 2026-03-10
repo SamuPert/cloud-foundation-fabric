@@ -21,7 +21,7 @@ routers:
         "192.168.0.0/16": "rfc1918-192"
     # route_policies:
     #   my-import-policy:
-    #     type: INPUT
+    #     type: IMPORT
     #     terms:
     #       - priority: 1
     #         match:
@@ -29,7 +29,7 @@ routers:
     #         actions:
     #           - expression: "accept()"
     #   my-export-policy:
-    #     type: OUTPUT
+    #     type: EXPORT
     #     terms:
     #       - priority: 1
     #         actions:
